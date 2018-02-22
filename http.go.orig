@@ -1,0 +1,36 @@
+package identity
+
+import (
+	"bytes"
+	"encoding/json"
+	"net/http"
+)
+
+type jsonErr struct {
+	Error   string `json:"error,omitempty"`
+	Message string `json:"message,omitempty"`
+}
+
+// renderJSON encodes given value into json string.
+// This function sets Content-Type: application/json header
+// and write json value into ResponseWriter.
+func renderJSON(w http.ResponseWriter, status int, v interface{}) error {
+	if err, ok := v.(error); ok {
+		je := jsonErr{
+			Error:   http.StatusText(status),
+			Message: err.Error(),
+		}
+		return renderJSON(w, status, je)
+	}
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(v); err != nil {
+		je := jsonErr{
+			Error: "internal error",
+		}
+		return renderJSON(w, http.StatusInternalServerError, je)
+	}
+	w.Header().Set(`Content-Type`, `application/json`)
+	w.WriteHeader(status)
+	buf.WriteTo(w)
+	return nil
+}

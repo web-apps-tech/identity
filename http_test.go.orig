@@ -1,0 +1,60 @@
+package identity
+
+import (
+	"bytes"
+	"errors"
+	"net/http"
+	"strings"
+	"testing"
+)
+
+type testResponseWriter struct {
+	buf    bytes.Buffer
+	header http.Header
+	status int
+}
+
+func (w *testResponseWriter) Write(b []byte) (int, error) { return w.buf.Write(b) }
+func (w *testResponseWriter) WriteHeader(status int)      { w.status = status }
+func (w *testResponseWriter) Header() http.Header         { return w.header }
+
+type testStruct struct {
+	A string `json:"a"`
+	B int    `json:"b"`
+}
+
+func TestRenderJSON(t *testing.T) {
+	candidates := []struct {
+		t      interface{}
+		status int
+		exBody string
+	}{
+		{
+			t:      testStruct{A: "value", B: 123},
+			status: http.StatusOK,
+			exBody: `{"a":"value","b":123}`,
+		},
+		{
+			t:      errors.New("something error"),
+			status: http.StatusInternalServerError,
+			exBody: `{"error":"Internal Server Error","message":"something error"}`,
+		},
+	}
+	for _, c := range candidates {
+		w := &testResponseWriter{header: http.Header{}}
+		if err := renderJSON(w, c.status, c.t); err != nil {
+			t.Error("err should not occured")
+			t.Logf("error: %s\n", err)
+			return
+		}
+		if w.status != c.status {
+			t.Errorf("status does not match: %d != %d\n", w.status, c.status)
+			return
+		}
+		s := strings.Trim(w.buf.String(), "\r\n")
+		if s != c.exBody {
+			t.Errorf("body does not match: %s != %s\n", s, c.exBody)
+			return
+		}
+	}
+}

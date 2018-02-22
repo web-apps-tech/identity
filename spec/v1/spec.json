@@ -1,0 +1,16 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "links": [
+        {
+            "title": "Health check",
+            "href": "/",
+            "rel": "index"
+        },
+        {
+            "title": "Session",
+            "href": "/session",
+            "method": "POST",
+            "rel": "create"
+        }
+    ]
+}
